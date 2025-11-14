@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyFlow AI - AI Timetable Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #34C759;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #718096;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .btn {
+            background: #34C759;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: #2db84d;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(52, 199, 89, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #34C759;
+            color: #34C759;
+        }
+
+        .btn-outline:hover {
+            background: #34C759;
+            color: white;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #34C759;
+            box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.1);
+        }
+
+        .subject-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .subject-info {
+            flex: 1;
+        }
+
+        .subject-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2d3748;
+        }
+
+        .subject-hours {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .difficulty-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .difficulty-easy {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .difficulty-medium {
+            background: #fefcbf;
+            color: #744210;
+        }
+
+        .difficulty-hard {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .delete-btn {
+            background: #fed7d7;
+            color: #c53030;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #fbb6b6;
+            transform: scale(1.1);
+        }
+
+        .timetable-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .day-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .day-header {
+            font-weight: 700;
+            color: #34C759;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .time-slot {
+            background: #f8fafc;
+            padding: 8px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .summary-section {
+            margin-top: 40px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tip-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .tip-item i {
+            color: #34C759;
+            margin-right: 12px;
+            font-size: 1.2rem;
+            margin-top: 2px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress {
+            height: 100%;
+            background: #34C759;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .icon-large {
+            font-size: 3rem;
+            color: #34C759;
+            margin-bottom: 20px;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #34C759;
+            margin: 8px 0;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .share-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .share-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        .share-link {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 1rem;
+        }
+
+        .social-share {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .social-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .social-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .facebook { background: #3b5998; }
+        .twitter { background: #1da1f2; }
+        .whatsapp { background: #25d366; }
+
+        @media (max-width: 768px) {
+            .card {
+                padding: 20px;
+            }
+            
+            .title {
+                font-size: 1.8rem;
+            }
+            
+            .timetable-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen active">
+            <div class="header">
+                <div class="logo">StudyFlow AI</div>
+                <h1 class="title">AI Timetable Generator</h1>
+                <p class="subtitle">Enter your subjects and hours. Get a perfect weekly plan in seconds.</p>
+            </div>
+            
+            <div class="card">
+                <div style="text-align: center; padding: 40px 20px;">
+                    <div class="icon-large">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h2 style="font-size: 1.5rem; margin-bottom: 16px;">Plan Your Study Schedule</h2>
+                    <p style="color: #718096; margin-bottom: 30px; max-width: 500px; margin-left: auto; margin-right: auto;">
+                        Our AI creates personalized weekly timetables based on your subjects, available time, and preferences.
+                    </p>
+                    <button class="btn" onclick="showScreen('input-screen')">
+                        <i class="fas fa-plus-circle"></i> Generate Timetable
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Screen -->
+        <div id="input-screen" class="screen">
+            <div class="header">
+                <div class="logo">StudyFlow AI</div>
+                <h1 class="title">Create Your Timetable</h1>
+                <p class="subtitle">Enter your subjects and preferences to generate your personalized study plan</p>
+            </div>
+
+            <div class="card">
+                <h2 style="font-size: 1.5rem; margin-bottom: 24px; color: #2d3748;">Subjects</h2>
+                
+                <div id="subjects-container">
+                    <!-- Subjects will be added here dynamically -->
+                </div>
+
+                <button class="btn btn-outline" onclick="addSubject()" style="width: 100%; margin-bottom: 24px;">
+                    <i class="fas fa-plus"></i> Add Subject
+                </button>
+
+                <h2 style="font-size: 1.5rem; margin-bottom: 24px; color: #2d3748;">Preferences</h2>
+
+                <div class="input-group">
+                    <label for="daily-limit">Daily Study Limit (hours)</label>
+                    <input type="number" id="daily-limit" value="4" min="1" max="12">
+                </div>
+
+                <div class="input-group">
+                    <label for="exam-date">Exam Date (Optional)</label>
+                    <input type="date" id="exam-date">
+                </div>
+
+                <div class="input-group">
+                    <label for="start-time">Start Time for Daily Study</label>
+                    <input type="time" id="start-time" value="09:00">
+                </div>
+
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="want-breaks" checked> Include Breaks
+                    </label>
+                </div>
+
+                <div class="input-group">
+                    <label for="study-goal">Study Goal</label>
+                    <select id="study-goal">
+                        <option value="pass">Pass the exam</option>
+                        <option value="good">Get good grades</option>
+                        <option value="excellent">Aim for excellence</option>
+                    </select>
+                </div>
+
+                <div class="btn-group" style="margin-top: 30px;">
+                    <button class="btn" onclick="generateTimetable()">
+                        <i class="fas fa-bolt"></i> ⚡ Generate My Timetable (AI)
+                    </button>
+                    <button class="btn btn-outline" onclick="showScreen('home-screen')">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timetable Screen -->
+        <div id="timetable-screen" class="screen">
+            <div class="header">
+                <div class="logo">StudyFlow AI</div>
+                <h1 class="title">Your AI-Generated Timetable</h1>
+                <p class="subtitle">Your personalized weekly study plan is ready!</p>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress" id="timetable-progress"></div>
+            </div>
+
+            <div class="stats-container" id="stats-container">
+                <!-- Stats will be added here -->
+            </div>
+
+            <div class="timetable-grid" id="timetable-container">
+                <!-- Timetable will be generated here -->
+            </div>
+
+            <div class="summary-section">
+                <h2 class="section-title">📋 Summary</h2>
+                <div id="summary-content"></div>
+            </div>
+
+            <div class="summary-section">
+                <h2 class="section-title">🎯 Personalized Study Tips</h2>
+                <div id="tips-content"></div>
+            </div>
+
+            <div id="exam-strategy-section" class="summary-section">
+                <h2 class="section-title">📘 Exam Strategy</h2>
+                <div id="exam-strategy-content"></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="generateTimetable()">
+                    <i class="fas fa-sync-alt"></i> Regenerate
+                </button>
+                <button class="btn btn-outline" onclick="downloadPDF()">
+                    <i class="fas fa-download"></i> Download PDF
+                </button>
+                <button class="btn btn-outline" onclick="showShareModal()">
+                    <i class="fas fa-share-alt"></i> Share
+                </button>
+                <button class="btn btn-outline" onclick="showScreen('input-screen')">
+                    <i class="fas fa-edit"></i> Edit Inputs
+                </button>
+            </div>
+        </div>
+
+        <!-- Share Modal -->
+        <div id="share-modal" class="share-modal">
+            <div class="share-content">
+                <span class="close-modal" onclick="closeShareModal()">&times;</span>
+                <h2 style="color: #2d3748; margin-bottom: 20px;">Share Your Timetable</h2>
+                <p style="color: #718096; margin-bottom: 15px;">Share your study plan with friends and classmates</p>
+                
+                <input type="text" class="share-link" id="share-link" readonly value="https://studyflow-ai.com/timetable/12345">
+                
+                <button class="btn" onclick="copyToClipboard()" style="width: 100%; margin-bottom: 20px;">
+                    <i class="fas fa-copy"></i> Copy Link
+                </button>
+                
+                <div class="social-share">
+                    <div class="social-btn facebook" onclick="shareToSocial('facebook')">
+                        <i class="fab fa-facebook-f"></i>
+                    </div>
+                    <div class="social-btn twitter" onclick="shareToSocial('twitter')">
+                        <i class="fab fa-twitter"></i>
+                    </div>
+                    <div class="social-btn whatsapp" onclick="shareToSocial('whatsapp')">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let subjects = [];
+        let currentScreen = 'home-screen';
+
+        // Initialize with one subject
+        addSubject();
+
+        function showScreen(screenId) {
+            document.getElementById(currentScreen).classList.remove('active');
+            document.getElementById(screenId).classList.add('active');
+            currentScreen = screenId;
+        }
+
+        function addSubject() {
+            const subjectId = Date.now();
+            const subjectCard = document.createElement('div');
+            subjectCard.className = 'subject-card';
+            subjectCard.innerHTML = `
+                <div class="subject-info">
+                    <input type="text" placeholder="Subject Name" class="subject-name-input" style="width: 120px; margin-right: 15px;">
+                    <input type="number" placeholder="Hours/week" class="subject-hours-input" style="width: 100px; margin-right: 15px;" min="1">
+                    <select class="subject-difficulty" style="width: 100px; margin-right: 15px;">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                    <select class="subject-time" style="width: 120px;">
+                        <option value="morning">Morning</option>
+                        <option value="afternoon">Afternoon</option>
+                        <option value="evening">Evening</option>
+                        <option value="anytime">Anytime</option>
+                    </select>
+                </div>
+                <button class="delete-btn" onclick="removeSubject(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            document.getElementById('subjects-container').appendChild(subjectCard);
+        }
+
+        function removeSubject(button) {
+            button.parentElement.remove();
+        }
+
+        function getSubjectData() {
+            const subjectCards = document.querySelectorAll('.subject-card');
+            const subjectsData = [];
+            
+            subjectCards.forEach(card => {
+                const name = card.querySelector('.subject-name-input').value;
+                const hours = card.querySelector('.subject-hours-input').value;
+                const difficulty = card.querySelector('.subject-difficulty').value;
+                const time = card.querySelector('.subject-time').value;
+                
+                if (name && hours) {
+                    subjectsData.push({
+                        name,
+                        hours: parseInt(hours),
+                        difficulty,
+                        time
+                    });
+                }
+            });
+            
+            return subjectsData;
+        }
+
+        function generateTimetable() {
+            const subjectsData = getSubjectData();
+            const dailyLimit = document.getElementById('daily-limit').value;
+            const examDate = document.getElementById('exam-date').value;
+            const startTime = document.getElementById('start-time').value;
+            const wantBreaks = document.getElementById('want-breaks').checked;
+            const studyGoal = document.getElementById('study-goal').value;
+
+            if (subjectsData.length === 0) {
+                alert('Please add at least one subject!');
+                return;
+            }
+
+            // Show loading progress
+            const progressBar = document.getElementById('timetable-progress');
+            progressBar.style.width = '30%';
+            
+            // Simulate AI processing time
+            setTimeout(() => {
+                progressBar.style.width = '70%';
+                
+                setTimeout(() => {
+                    progressBar.style.width = '100%';
+                    
+                    // Generate the timetable
+                    generateTimetableContent(subjectsData, dailyLimit, examDate, startTime, wantBreaks, studyGoal);
+                    showScreen('timetable-screen');
+                }, 500);
+            }, 500);
+        }
+
+        function generateTimetableContent(subjects, dailyLimit, examDate, startTime, wantBreaks, studyGoal) {
+            const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+            const timetableContainer = document.getElementById('timetable-container');
+            const summaryContent = document.getElementById('summary-content');
+            const tipsContent = document.getElementById('tips-content');
+            const examStrategyContent = document.getElementById('exam-strategy-content');
+            const statsContainer = document.getElementById('stats-container');
+            
+            // Hide exam strategy if no exam date
+            document.getElementById('exam-strategy-section').style.display = examDate ? 'block' : 'none';
+
+            // Clear containers
+            timetableContainer.innerHTML = '';
+            summaryContent.innerHTML = '';
+            tipsContent.innerHTML = '';
+            examStrategyContent.innerHTML = '';
+            statsContainer.innerHTML = '';
+
+            // Generate stats
+            const totalHours = subjects.reduce((sum, s) => sum + s.hours, 0);
+            const avgHoursPerDay = (totalHours / 7).toFixed(1);
+            
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${subjects.length}</div>
+                    <div class="stat-label">Subjects</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${totalHours}</div>
+                    <div class="stat-label">Total Hours</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avgHoursPerDay}</div>
+                    <div class="stat-label">Avg per Day</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${dailyLimit}</div>
+                    <div class="stat-label">Daily Limit</div>
+                </div>
+            `;
+
+            // Generate timetable for each day
+            days.forEach(day => {
+                const dayCard = document.createElement('div');
+                dayCard.className = 'day-card';
+                
+                // Generate time slots for this day (simplified)
+                const timeSlots = [];
+                let currentHour = 9; // Start from 9 AM
+                let currentMinute = 0;
+                
+                // Distribute subjects across the week
+                subjects.forEach((subject, index) => {
+                    if (timeSlots.length < 3) { // Limit to 3 sessions per day
+                        const duration = 1; // 1 hour sessions
+                        const endTimeHour = currentHour + duration;
+                        
+                        timeSlots.push({
+                            time: `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}-${endTimeHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`,
+                            subject: subject.name,
+                            difficulty: subject.difficulty
+                        });
+                        
+                        currentHour += duration;
+                        if (wantBreaks && timeSlots.length < 3) {
+                            timeSlots.push({ break: true });
+                            currentHour += 0.167; // 10 minutes break
+                        }
+                    }
+                });
+
+                dayCard.innerHTML = `
+                    <div class="day-header">${day}</div>
+                    ${timeSlots.map(slot => {
+                        if (slot.break) {
+                            return '<div class="time-slot" style="background: #ffebcd; color: #8b4513;">Break (10 mins)</div>';
+                        } else {
+                            let color = '#34C759';
+                            if (slot.difficulty === 'hard') color = '#e53e3e';
+                            else if (slot.difficulty === 'medium') color = '#d69e2e';
+                            
+                            return `
+                                <div class="time-slot">
+                                    <div style="color: ${color}; font-weight: 600;">${slot.subject}</div>
+                                    <div style="font-size: 0.75rem; color: #718096;">${slot.time}</div>
+                                </div>
+                            `;
+                        }
+                    }).join('')}
+                `;
+                
+                timetableContainer.appendChild(dayCard);
+            });
+
+            // Generate summary
+            summaryContent.innerHTML = `
+                <div style="background: #f0fff4; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                    <p><strong>Total subjects:</strong> ${subjects.length}</p>
+                    <p><strong>Total weekly hours:</strong> ${totalHours}</p>
+                    <p><strong>Daily limit:</strong> ${dailyLimit} hours</p>
+                    <p><strong>Hours are evenly distributed across 7 days</strong></p>
+                    <p><strong>Hard subjects placed in morning sessions</strong></p>
+                </div>
+            `;
+
+            // Generate study tips based on goal
+            let tips = [];
+            if (studyGoal === 'excellent') {
+                tips = [
+                    '<strong>Start with difficult subjects</strong> when your energy is highest in the morning.',
+                    '<strong>Take regular breaks</strong> to maintain focus and prevent mental fatigue.',
+                    '<strong>Mix different subjects</strong> to keep your mind engaged and avoid monotony.',
+                    '<strong>Review notes daily</strong> to reinforce learning.',
+                    '<strong>Practice past papers</strong> regularly to test your knowledge.'
+                ];
+            } else if (studyGoal === 'good') {
+                tips = [
+                    '<strong>Start with difficult subjects</strong> when your energy is highest in the morning.',
+                    '<strong>Take regular breaks</strong> to maintain focus and prevent mental fatigue.',
+                    '<strong>Mix different subjects</strong> to keep your mind engaged and avoid monotony.',
+                    '<strong>Review notes twice a week</strong> to reinforce learning.'
+                ];
+            } else {
+                tips = [
+                    '<strong>Start with difficult subjects</strong> when your energy is highest in the morning.',
+                    '<strong>Take regular breaks</strong> to maintain focus and prevent mental fatigue.',
+                    '<strong>Mix different subjects</strong> to keep your mind engaged and avoid monotony.'
+                ];
+            }
+
+            tipsContent.innerHTML = tips.map(tip => `
+                <div class="tip-item">
+                    <i class="fas fa-lightbulb"></i>
+                    <div>${tip}</div>
+                </div>
+            `).join('');
+
+            // Generate exam strategy if exam date is provided
+            if (examDate) {
+                const examDateObj = new Date(examDate);
+                const today = new Date();
+                const daysUntilExam = Math.ceil((examDateObj - today) / (1000 * 60 * 60 * 24));
+                
+                let strategy = '';
+                if (studyGoal === 'excellent') {
+                    strategy = `Focus intensively on weak areas 3 weeks before the exam. Take practice tests daily in the final week.`;
+                } else if (studyGoal === 'good') {
+                    strategy = `Review all subjects 2 weeks before the exam. Take practice tests every other day.`;
+                } else {
+                    strategy = `Review key concepts 1 week before the exam. Take at least one practice test.`;
+                }
+                
+                examStrategyContent.innerHTML = `
+                    <div style="background: #fffbeb; padding: 16px; border-radius: 8px;">
+                        <p><strong>Exam Date:</strong> ${examDateObj.toLocaleDateString()}</p>
+                        <p><strong>Days until exam:</strong> ${daysUntilExam} days</p>
+                        <p><strong>Strategy:</strong> ${strategy}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function downloadPDF() {
+            // Create a hidden div to hold the PDF content
+            const pdfContent = document.createElement('div');
+            pdfContent.id = 'pdf-content';
+            pdfContent.style.position = 'absolute';
+            pdfContent.style.left = '-9999px';
+            pdfContent.style.top = '0';
+            pdfContent.style.width = '210mm'; // A4 width
+            pdfContent.style.padding = '20mm';
+            pdfContent.style.fontFamily = 'Inter, sans-serif';
+            pdfContent.style.backgroundColor = 'white';
+            pdfContent.style.color = 'black';
+            
+            // Get the timetable content
+            const timetableContainer = document.getElementById('timetable-container').cloneNode(true);
+            const summaryContent = document.getElementById('summary-content').cloneNode(true);
+            const tipsContent = document.getElementById('tips-content').cloneNode(true);
+            const examStrategyContent = document.getElementById('exam-strategy-content').cloneNode(true);
+            const statsContainer = document.getElementById('stats-container').cloneNode(true);
+            
+            // Add content to the PDF div
+            pdfContent.innerHTML = `
+                <h1 style="color: #34C759; text-align: center; margin-bottom: 20px; font-size: 24px;">StudyFlow AI - Weekly Timetable</h1>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+                    ${Array.from(document.querySelectorAll('.stat-card')).map(card => {
+                        const value = card.querySelector('.stat-value').textContent;
+                        const label = card.querySelector('.stat-label').textContent;
+                        return `<div style="text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 5px;"><strong>${value}</strong><br>${label}</div>`;
+                    }).join('')}
+                </div>
+                <h2 style="margin: 15px 0; color: #333;">Timetable</h2>
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 20px;">
+                    ${Array.from(document.querySelectorAll('.day-card')).map(dayCard => {
+                        return `
+                            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;">
+                                <h3 style="color: #34C759; margin-bottom: 10px;">${dayCard.querySelector('.day-header').textContent}</h3>
+                                ${dayCard.innerHTML.replace(/<div class="day-header">.*?<\/div>/, '').replace(/<div class="time-slot">/g, '<div style="background: #f8fafc; padding: 5px; margin: 3px 0; border-radius: 3px; font-size: 12px;">')}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <h2 style="margin: 15px 0; color: #333;">Summary</h2>
+                <div style="background: #f0fff4; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                    ${summaryContent.innerHTML.replace(/<div style="background: #f0fff4; padding: 16px; border-radius: 8px; margin-bottom: 16px;">(.*?)<\/div>/, '$1')}
+                </div>
+                
+                <h2 style="margin: 15px 0; color: #333;">Study Tips</h2>
+                <div>
+                    ${tipsContent.innerHTML.replace(/<div class="tip-item">/g, '<div style="display: flex; align-items: flex-start; margin-bottom: 8px; padding: 8px; background: #f8fafc; border-radius: 3px;">').replace(/<i class="fas fa-lightbulb"><\/i>/g, '<span style="color: #34C759; margin-right: 8px; font-size: 14px;">💡</span>')}
+                </div>
+                
+                ${document.getElementById('exam-strategy-section').style.display !== 'none' ? `
+                <h2 style="margin: 15px 0; color: #333;">Exam Strategy</h2>
+                <div style="background: #fffbeb; padding: 10px; border-radius: 5px;">
+                    ${examStrategyContent.innerHTML.replace(/<div style="background: #fffbeb; padding: 16px; border-radius: 8px;">(.*?)<\/div>/, '$1')}
+                </div>
+                ` : ''}
+                
+                <p style="margin-top: 20px; text-align: center; color: #777; font-size: 12px;">
+                    Generated by StudyFlow AI • ${new Date().toLocaleDateString()}
+                </p>
+            `;
+            
+            // Add the PDF content to the document
+            document.body.appendChild(pdfContent);
+            
+            // Use html2canvas to capture the content
+            html2canvas(pdfContent, {
+                scale: 2, // Higher quality
+                useCORS: true,
+                logging: false
+            }).then(canvas => {
+                // Remove the temporary content
+                document.body.removeChild(pdfContent);
+                
+                // Create PDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Calculate dimensions to fit A4
+                const imgWidth = 210 - 20; // A4 width minus margins
+                const pageHeight = 297 - 20; // A4 height minus margins
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 10;
+                
+                // Add the first page
+                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                // Add additional pages if needed
+                let pageNo = 1;
+                while (heightLeft >= 0) {
+                    pageNo++;
+                    pdf.addPage();
+                    position = heightLeft - imgHeight + 10;
+                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                // Save the PDF
+                pdf.save('study-timetable.pdf');
+            });
+        }
+
+        function showShareModal() {
+            // Update the share link with current URL
+            document.getElementById('share-link').value = window.location.href;
+            document.getElementById('share-modal').style.display = 'flex';
+        }
+
+        function closeShareModal() {
+            document.getElementById('share-modal').style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            const shareLink = document.getElementById('share-link');
+            shareLink.select();
+            document.execCommand('copy');
+            
+            // Show feedback
+            const originalText = document.querySelector('.btn[onclick="copyToClipboard()"]').innerHTML;
+            document.querySelector('.btn[onclick="copyToClipboard()"]').innerHTML = '<i class="fas fa-check"></i> Link Copied!';
+            
+            setTimeout(() => {
+                document.querySelector('.btn[onclick="copyToClipboard()"]').innerHTML = originalText;
+            }, 2000);
+        }
+
+        function shareToSocial(platform) {
+            const url = encodeURIComponent(window.location.href);
+            const text = encodeURIComponent('Check out my personalized study timetable created with StudyFlow AI!');
+            
+            let shareUrl = '';
+            
+            switch(platform) {
+                case 'facebook':
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+                    break;
+                case 'twitter':
+                    shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+                    break;
+                case 'whatsapp':
+                    shareUrl = `https://wa.me/?text=${text}%20${url}`;
+                    break;
+            }
+            
+            window.open(shareUrl, '_blank');
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('share-modal');
+            if (event.target === modal) {
+                closeShareModal();
+            }
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add initial subject
+            addSubject();
+        });
+    </script>
+</body>
+</html>
+
